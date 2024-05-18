@@ -10,6 +10,7 @@ import (
 const (
 	NEW  = "storage.sqlite.New"
 	SAVE = "storage.sqlite.SaveURL"
+	GET  = "storage.sqlite.GetURL"
 )
 
 type Storage struct {
@@ -42,20 +43,32 @@ func New(storagePath string) (*Storage, error) {
 }
 
 func (s *Storage) SaveURL(urlToSave string, alias string) error {
-	const op = "storage.sqlite.SaveURL"
-
 	stmt, err := s.db.Prepare("INSERT INTO url(url, alias) VALUES(?, ?)")
 	if err != nil {
-		return fmt.Errorf("%s: %w", op, err)
+		return fmt.Errorf("%s: %w", SAVE, err)
 	}
 
 	_, err = stmt.Exec(urlToSave, alias)
 	if err != nil {
 		if sqliteErr, ok := err.(sqlite3.Error); ok && sqliteErr.ExtendedCode == sqlite3.ErrConstraintUnique {
-			return fmt.Errorf("%s: %w", op, storage.ErrURLExists)
+			return fmt.Errorf("%s: %w", SAVE, storage.ErrURLExists)
 		}
 
-		return fmt.Errorf("%s: %w", op, err)
+		return fmt.Errorf("%s: %w", SAVE, err)
 	}
 	return nil
+}
+
+func (s *Storage) GetUrl(alias string) (string, error) {
+	stmt, err := s.db.Prepare("SELECT url FROM url WHERE alias = ?")
+	if err != nil {
+		return "", fmt.Errorf("%s: %w", GET, err)
+	}
+	var res string
+	err = stmt.QueryRow(alias).Scan(&res)
+	if err != nil {
+		return "", fmt.Errorf("%s: %w", SAVE, err)
+	}
+	return res, err
+
 }

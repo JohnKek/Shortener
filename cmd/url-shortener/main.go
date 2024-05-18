@@ -26,10 +26,7 @@ func main() {
 		logger.Error("failed to init sqlite storage", utils.Err(err))
 		os.Exit(1)
 	}
-	err = storage.SaveURL("https://www.google.com", "google")
-	if err != nil {
-		logger.Error("failed to save url", utils.Err(err))
-	}
+	_ = storage
 	// TODO: init storage: sqllite
 	// TODO: init router: chi, render
 
