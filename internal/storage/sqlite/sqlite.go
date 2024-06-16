@@ -4,13 +4,15 @@ import (
 	"UrlShort/internal/storage"
 	"database/sql"
 	"fmt"
-	"github.com/mattn/go-sqlite3"
+	"modernc.org/sqlite"
+	_ "modernc.org/sqlite" // (1)
 )
 
 const (
-	NEW  = "storage.sqlite.New"
-	SAVE = "storage.sqlite.SaveURL"
-	GET  = "storage.sqlite.GetURL"
+	NEW    = "storage.sqlite.New"
+	SAVE   = "storage.sqlite.SaveURL"
+	GET    = "storage.sqlite.GetURL"
+	DELETE = "storage.sqlite.DeleteURL"
 )
 
 type Storage struct {
@@ -18,7 +20,7 @@ type Storage struct {
 }
 
 func New(storagePath string) (*Storage, error) {
-	db, err := sql.Open("sqlite3", storagePath)
+	db, err := sql.Open("sqlite", storagePath)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", NEW, err)
 	}
@@ -50,7 +52,7 @@ func (s *Storage) SaveURL(urlToSave string, alias string) error {
 
 	_, err = stmt.Exec(urlToSave, alias)
 	if err != nil {
-		if sqliteErr, ok := err.(sqlite3.Error); ok && sqliteErr.ExtendedCode == sqlite3.ErrConstraintUnique {
+		if _, ok := err.(*sqlite.Error); ok {
 			return fmt.Errorf("%s: %w", SAVE, storage.ErrURLExists)
 		}
 
@@ -71,4 +73,16 @@ func (s *Storage) GetUrl(alias string) (string, error) {
 	}
 	return res, err
 
+}
+
+func (s *Storage) DeleteURL(alias string) error {
+	stmt, err := s.db.Prepare("DELETE url FROM url WHERE alias = ?")
+	if err != nil {
+		return fmt.Errorf("%s: %w", DELETE, err)
+	}
+	_, err = stmt.Exec(alias)
+	if err != nil {
+		return fmt.Errorf("%s: %w", SAVE, err)
+	}
+	return nil
 }
